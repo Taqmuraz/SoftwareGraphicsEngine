@@ -1,0 +1,17 @@
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\bin\Debug\netcoreapp3.0\WpfExp.exe
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\bin\Debug\netcoreapp3.0\WpfExp.deps.json
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\bin\Debug\netcoreapp3.0\WpfExp.runtimeconfig.json
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\bin\Debug\netcoreapp3.0\WpfExp.runtimeconfig.dev.json
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\bin\Debug\netcoreapp3.0\WpfExp.dll
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\bin\Debug\netcoreapp3.0\WpfExp.pdb
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp.csprojAssemblyReference.cache
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\MainWindow.g.cs
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\App.g.cs
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp_MarkupCompile.cache
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp_MarkupCompile.lref
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\MainWindow.baml
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp.g.resources
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp.AssemblyInfoInputs.cache
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp.AssemblyInfo.cs
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp.dll
+C:\Users\LuLook\Documents\Projects\WpfExp\WpfExp\obj\Debug\netcoreapp3.0\WpfExp.pdb
