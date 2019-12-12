@@ -25,10 +25,13 @@ namespace WpfExp
 		byte[] pixels;
 		int pixelStride;
 		Int32Rect rect;
-		Matrix4x4 model = Matrix4x4.CreateWorldMatrix(Vector3.right, Vector3.up, Vector3.forward, new Vector3(0, 0, 0));
+		Matrix4x4 model = Matrix4x4.CreateWorldMatrix(Vector3.right * 0.25f, Vector3.up * 0.5f, Vector3.forward * 0.25f, new Vector3(0, 0, 0));
 		Matrix4x4 view = Matrix4x4.CreateWorldMatrix(Vector3.right, Vector3.up, Vector3.forward, Vector3.forward * 4f);
 		Matrix4x4 projection = Matrix4x4.CreateProjectionMatrix(60f, 0.1f, 1000f);
-		Vector4 plus;
+
+		Vector3 pos;
+		Vector3 rot;
+		
 
 		public MainWindow()
 		{
@@ -65,9 +68,8 @@ namespace WpfExp
 			if (e.Key == Key.A) rotate += Vector3.down;
 			if (e.Key == Key.D) rotate += Vector3.up;
 
-			model = model.Translate(translate);
-			//plus += translate * 0.1f;
-			view = view.Rotate(rotate * 3f);
+			pos += translate * 0.1f;
+			rot += rotate * 3f;
 		}
 
 		private void CompositionTarget_Rendering(object sender, EventArgs e)
@@ -89,13 +91,14 @@ namespace WpfExp
 
 			while (en.MoveNext())
 			{
-				Matrix4x4 mvp = model * view * projection;
+				Matrix4x4 control = Matrix4x4.CreateRotationMatrix(rot) * Matrix4x4.CreateTranslationMatrix(pos);
+				Matrix4x4 mvp = model * control * view * projection;
 
 				Vector4 lastVert = vs[last];
 				Vector4 currentVert = vs[en.Current];
 
-				Vector4 v = mvp * currentVert + plus;
-				Vector4 v_last = mvp * lastVert + plus;
+				Vector4 v = mvp * currentVert;
+				Vector4 v_last = mvp * lastVert;
 
 				var vint = ViewportToScren(v);
 				var vint_last = ViewportToScren(v_last);
@@ -103,7 +106,7 @@ namespace WpfExp
 
 				last = en.Current;
 
-				textBox.Content = $"model : \n{model.ToString()}\n\nview : \n{view}\n\nmodel * view :\n{model * view}\n\nvert : {currentVert}\n\nmodel * vert : \n{(model * currentVert).ToString()}\n\nmv * vert : \n{(model * view * currentVert).ToString()}\n\n{vint}";
+				textBox.Content = $"model : \n{(model * control).ToString()}\n\nview : \n{view}\n\nmodel * view :\n{model * control * view}\n\nvert : {currentVert}\n\nmodel * vert : \n{(model * control * currentVert).ToString()}\n\nmv * vert : \n{(model * control * view * currentVert).ToString()}\n\n{vint}";
 			}
 
 			

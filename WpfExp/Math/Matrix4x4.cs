@@ -142,6 +142,10 @@ namespace EnginePart
 		{
 			return CreateRotationMatrix_X(euler.x) * CreateRotationMatrix_Y(euler.y) * CreateRotationMatrix_Z(euler.z);
 		}
+		public static Matrix4x4 CreateTranslationMatrix(Vector3 pos)
+		{
+			return new Matrix4x4(Vector3.right, Vector3.up, Vector3.forward, new Vector4(pos.x, pos.y, pos.z, 1f));
+		}
 		public static Matrix4x4 CreateRotationMatrix_X(float angle)
 		{
 			float sin = angle.Sin();
