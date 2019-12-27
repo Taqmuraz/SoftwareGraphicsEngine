@@ -23,6 +23,7 @@ namespace WpfExp
 	{
 		WriteableBitmap display;
 		byte[] pixels;
+		float[] zBuffer;
 		int pixelStride;
 		Int32Rect rect;
 		Matrix4x4 model = Matrix4x4.CreateWorldMatrix(Vector3.right * 0.25f, Vector3.up * 0.5f, Vector3.forward * 0.25f, new Vector3(0, 0, 0));
@@ -31,6 +32,7 @@ namespace WpfExp
 
 		Vector3 pos;
 		Vector3 rot;
+		Vector3 rotateAround;
 		
 
 		public MainWindow()
@@ -46,6 +48,8 @@ namespace WpfExp
 
 			pixels = new byte[width * height * (display.Format.BitsPerPixel / 8)];
 
+			zBuffer = new float[width * height];
+
 			pixelStride = (display.PixelWidth * display.Format.BitsPerPixel) / 8;
 
 			CompositionTarget.Rendering += CompositionTarget_Rendering;
@@ -56,10 +60,11 @@ namespace WpfExp
 		{
 			Vector3 translate = Vector3.zero;
 			Vector3 rotate = Vector3.zero;
-			if (e.Key == Key.Right) translate += Vector3.right;
-			if (e.Key == Key.Left) translate += Vector3.left;
-			if (e.Key == Key.Up) translate += Vector3.up;
-			if (e.Key == Key.Down) translate += Vector3.down;
+			Vector3 camRotate = Vector3.zero;
+			if (e.Key == Key.NumPad6) translate += Vector3.right;
+			if (e.Key == Key.NumPad4) translate += Vector3.left;
+			if (e.Key == Key.NumPad8) translate += Vector3.up;
+			if (e.Key == Key.NumPad2) translate += Vector3.down;
 			if (e.Key == Key.PageUp) translate += Vector3.forward;
 			if (e.Key == Key.PageDown) translate += Vector3.back;
 
@@ -68,15 +73,26 @@ namespace WpfExp
 			if (e.Key == Key.A) rotate += Vector3.down;
 			if (e.Key == Key.D) rotate += Vector3.up;
 
+			if (e.Key == Key.Left) camRotate += Vector3.down;
+			if (e.Key == Key.Right) camRotate += Vector3.up;
+			if (e.Key == Key.Up) camRotate += Vector3.right;
+			if (e.Key == Key.Down) camRotate += Vector3.left;
+
 			pos += translate * 0.1f;
 			rot += rotate * 3f;
+			rotateAround += camRotate;
 		}
 
 		private void CompositionTarget_Rendering(object sender, EventArgs e)
 		{
 			ClearScreen(new Color32(0,0,0,0));
+			ClearzBuffer();
 
-			Vector4[] vs = new Vector4[]
+			Matrix4x4 view = Matrix4x4.RotateAround(rotateAround, Vector3.zero) * this.view;
+
+			try
+			{
+				Vector4[] vs = new Vector4[]
 			{
 				new Vector4(0, 1, 0, 1),
 				new Vector4(1, 0, 1, 1),
@@ -84,32 +100,39 @@ namespace WpfExp
 				new Vector4(-1, 0, -1, 1),
 				new Vector4(1, 0, -1, 1)
 			};
-			IEnumerable<int> indices = new int[] { 2, 0, 1, 0, 4, 0, 3, 0, 2, 1, 4, 3, 2 };
-			IEnumerator<int> en = indices.GetEnumerator();
-			en.MoveNext();
-			int last = en.Current;
+				int[] indices = new int[] { 0, 3, 2, 0, 2, 1, 0, 1, 4, 0, 4, 3, 1, 3, 4, 2, 3, 1 };
 
-			while (en.MoveNext())
+				
+				for (int i = 0; i < indices.Length; i += 3)
+				{
+
+					Matrix4x4 control = Matrix4x4.CreateRotationMatrix(rot) * Matrix4x4.CreateTranslationMatrix(pos);
+					Matrix4x4 mvp = model * control * view * projection;
+
+					Vector4 vector_0 = mvp * vs[indices[i]];
+					Vector4 vector_1 = mvp * vs[indices[i + 1]];
+					Vector4 vector_2 = mvp * vs[indices[i + 2]];
+
+					Vector3 normal = Vector3.Cross((Vector3)(vector_0 - vector_1), (Vector3)(vector_0 - vector_2)).normalized;
+					float light = Vector3.Dot(normal, Vector3.forward);
+
+					if (light > 0)
+					{
+						var t_0 = ViewportToScren(vector_0);
+						var t_1 = ViewportToScren(vector_1);
+						var t_2 = ViewportToScren(vector_2);
+
+						DrawTriangle(t_0, t_1, t_2, new Color32(255, 255, 255, 255) * light);
+					}
+
+					//textBox.Content = $"model : \n{(model * control).ToString()}\n\nview : \n{view}\n\nmodel * view :\n{model * control * view}\n\nvert : {currentVert}\n\nmodel * vert : \n{(model * control * currentVert).ToString()}\n\nmv * vert : \n{(model * control * view * currentVert).ToString()}\n\n{vint}";
+				}
+			}
+			catch (Exception ex)
 			{
-				Matrix4x4 control = Matrix4x4.CreateRotationMatrix(rot) * Matrix4x4.CreateTranslationMatrix(pos);
-				Matrix4x4 mvp = model * control * view * projection;
-
-				Vector4 lastVert = vs[last];
-				Vector4 currentVert = vs[en.Current];
-
-				Vector4 v = mvp * currentVert;
-				Vector4 v_last = mvp * lastVert;
-
-				var vint = ViewportToScren(v);
-				var vint_last = ViewportToScren(v_last);
-				WriteLine(vint, vint_last, new Color32(0, 255, 0, 255));
-
-				last = en.Current;
-
-				textBox.Content = $"model : \n{(model * control).ToString()}\n\nview : \n{view}\n\nmodel * view :\n{model * control * view}\n\nvert : {currentVert}\n\nmodel * vert : \n{(model * control * currentVert).ToString()}\n\nmv * vert : \n{(model * control * view * currentVert).ToString()}\n\n{vint}";
+				textBox.Content = ex.ToString();
 			}
 
-			
 
 			ApplyWrite();
 		}
@@ -128,8 +151,38 @@ namespace WpfExp
 			}
 			ApplyWrite();
 		}
-		private void WritePixel(int x, int y, Color32 color)
+		private void ClearzBuffer()
 		{
+			for (int i = 0; i < zBuffer.Length; i++)
+			{
+				zBuffer[i] = float.NegativeInfinity;
+			}
+		}
+
+		private void WritePixel(float x, float y, Color32 color)
+		{
+			WritePixel((int)x, (int)y, color);
+		}
+		private Color32 PickPixel(int x, int y)
+		{
+			Color32 color = new Color32 (255, 255, 255, 255);
+			if (rect.Width > x && rect.Height > y && y >= 0 && x >= 0)
+			{
+				int pixelOffset = (x + y * rect.Width) * 32 / 8;
+				color.b = pixels[pixelOffset];
+				color.g = pixels[pixelOffset + 1];
+				color.r = pixels[pixelOffset + 2];
+				color.a = pixels[pixelOffset + 3];
+			}
+			return color;
+		}
+		private void WritePixel(int x, int y, Color32 color, bool add = false)
+		{
+			if (add)
+			{
+				color = color + PickPixel(x, y);
+			}
+
 			if (rect.Width > x && rect.Height > y && y >= 0 && x >= 0)
 			{
 				int pixelOffset = (x + y * rect.Width) * 32 / 8;
@@ -139,15 +192,80 @@ namespace WpfExp
 				pixels[pixelOffset + 3] = color.a;
 			}
 		}
-		private Vector2Int ViewportToScren(Vector3 v)
+		private Vector3Int ViewportToScren(Vector3 v)
 		{
 			v.y = -v.y;
 			Vector3 s = (v + new Vector3(1f, 1f, 0f)) * 0.5f * new Vector3(rect.Width, rect.Height, 1f);
-			return new Vector2Int((int)s.x, (int)s.y);
+			s.z = v.z;
+			return (Vector3Int)s;
 		}
-		private Vector2Int ViewportToScren(Vector4 v)
+		private Vector3Int ViewportToScren(Vector4 v)
 		{
 			return ViewportToScren((Vector3)v);
+		}
+		private bool TriangleCheck (Vector2 a, Vector2 b, Vector2 c, Vector2 p)
+		{
+			float q1 = Triangle_Q_Check(a, b, p);
+			float q2 = Triangle_Q_Check(b, c, p);
+			float q3 = Triangle_Q_Check(c, a, p);
+
+			return ((q1 >= 0) && (q2 >= 0) && (q3 >= 0)) || ((q1 < 0) && (q2 < 0) && (q3 < 0));
+		}
+		private float Triangle_Q_Check (Vector2 a, Vector2 b, Vector2 at)
+		{
+			return at.x * (b.y - a.y) + at.y * (a.x - b.x) + a.y * b.x - a.x * b.y;
+		}
+		private void DrawTriangle(Vector3 t0, Vector3 t1, Vector3 t2, Color32 color)
+		{
+			Vector3[] vs = new Vector3[3] { t0, t1, t2 };
+			vs = vs.OrderByDescending(t => t.y).ToArray();
+
+			t0 = vs[0];
+			t1 = vs[1];
+			t2 = vs[2];
+			if (t1.x > t2.x) this.Swap(ref t1, ref t2);
+
+			float minX = Mathf.Min(t0.x, t1.x, t2.x);
+			float maxX = Mathf.Max(t0.x, t1.x, t2.x);
+			float minY = Mathf.Min(t0.y, t1.y, t2.y);
+			float maxY = Mathf.Max(t0.y, t1.y, t2.y);
+
+			Int32Rect bounds = new Int32Rect((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
+
+
+			for (int x = 0; x <= bounds.Width; x++)
+			{
+				for (int y = 0; y <= bounds.Height; y++)
+				{
+					int screenX = bounds.X + x;
+					int screenY = bounds.Y + y;
+					Vector2 point = new Vector2(screenX, screenY);
+
+					if (TriangleCheck((Vector2)t0, (Vector2)t1, (Vector2)t2, point))
+					{
+						WritePixel (screenX, screenY, color);
+					}
+				}
+			}
+
+			WriteLine(t0, t1, new Color32(255, 0, 0, 255));
+			WriteLine(t1, t2, new Color32(0, 255, 0, 255));
+			WriteLine(t0, t2, new Color32(0, 0, 255, 255));
+
+			Vector2 test_a = Vector2.one.normalized;
+			Vector2 test_b = new Vector2(-1, 1).normalized;
+			float d_test = 1f / Mathf.Determinant(test_a, test_b);
+			Vector2 t = new Vector2 (7.07f, 7.07f);
+			Vector2 test = new Vector2 (Mathf.Determinant(t, test_b) * d_test, Mathf.Determinant(test_a, t) * d_test);
+			textBox.Content = $"a = {test_a}\nb = {test_b}\nt = {t}\ntest = {test}";
+		}
+		private void WriteLine(Vector3 coord_0, Vector3 coord_1, Color32 color)
+		{
+			WriteLine((Vector2Int)coord_0, (Vector2Int)coord_1, color);
+		}
+		private void WriteLine(Vector4 coord_0, Vector4 coord_1, Color32 color)
+		{
+			WriteLine((Vector2Int)coord_0, (Vector2Int)coord_1, color);
 		}
 		private void WriteLine(Vector2Int coord_0, Vector2Int coord_1, Color32 color)
 		{

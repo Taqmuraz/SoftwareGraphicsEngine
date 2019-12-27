@@ -10,6 +10,19 @@
 			this.y = y;
 		}
 
+		public static explicit operator Vector2Int(Vector2 vector)
+		{
+			return new Vector2Int((int)vector.x, (int)vector.y);
+		}
+		public static explicit operator Vector2Int(Vector3 vector)
+		{
+			return new Vector2Int((int)vector.x, (int)vector.y);
+		}
+		public static explicit operator Vector2Int(Vector4 vector)
+		{
+			return new Vector2Int((int)vector.x, (int)vector.y);
+		}
+
 		public static Vector2Int operator +(Vector2Int a, Vector2Int b)
 		{
 			return new Vector2Int(a.x + b.x, a.y + b.y);
@@ -21,6 +34,10 @@
 		public static Vector2Int operator *(Vector2Int a, int b)
 		{
 			return new Vector2Int(a.x * b, a.y * b);
+		}
+		public static Vector2Int operator *(Vector2Int a, float b)
+		{
+			return new Vector2Int((int)(a.x * b), (int)(a.y * b));
 		}
 		public static Vector2Int operator /(Vector2Int a, int b)
 		{

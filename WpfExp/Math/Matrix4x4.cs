@@ -138,6 +138,10 @@ namespace EnginePart
 		{
 			return this * CreateRotationMatrix(euler);
 		}
+		public static Matrix4x4 RotateAround(Vector3 euler, Vector3 position)
+		{
+			return CreateRotationMatrix(euler) * CreateTranslationMatrix(position);
+		}
 		public static Matrix4x4 CreateRotationMatrix(Vector3 euler)
 		{
 			return CreateRotationMatrix_X(euler.x) * CreateRotationMatrix_Y(euler.y) * CreateRotationMatrix_Z(euler.z);

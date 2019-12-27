@@ -15,7 +15,7 @@ namespace EnginePart
 
 		public override string ToString ()
 		{
-			return string.Format ("x : {0}\ny : {1}", x, y);
+			return $"( {x}, {y} )";
 		}
 
 		public static implicit operator Vector3 (Vector2 v)

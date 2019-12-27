@@ -105,6 +105,11 @@ namespace EnginePart
 			return Dot(a, b).ACos();
 		}
 
+		public static Vector3 Lerp (Vector3 a, Vector3 b, float t)
+		{
+			return a + (b - a) * t;
+		}
+
 		public static readonly Vector3 right = new Vector3 (1, 0, 0);
 		public static readonly Vector3 zero = new Vector3 (0, 0, 0);
 		public static readonly Vector3 one = new Vector3 (1, 1, 1);
