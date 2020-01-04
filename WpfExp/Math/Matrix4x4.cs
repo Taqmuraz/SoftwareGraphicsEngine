@@ -22,6 +22,18 @@ namespace EnginePart
 			}
 		}
 
+		public Matrix4x4 (
+			float m11, float m12, float m13, float m14,
+			float m21, float m22, float m23, float m24,
+			float m31, float m32, float m33, float m34,
+			float m41, float m42, float m43, float m44) : this (
+				new Vector4(m11, m21, m31, m41),
+				new Vector4(m12, m22, m32, m42),
+				new Vector4(m13, m23, m33, m43),
+				new Vector4(m14, m24, m34, m44))
+		{
+		}
+
 		public Matrix4x4 (Vector4 column_0, Vector4 column_1, Vector4 column_2, Vector4 column_3)
 		{
 			this.column_0 = column_0;
@@ -193,18 +205,16 @@ namespace EnginePart
 			up = Vector3.Cross(fwd, right);
 			return new Matrix4x4(right, up, fwd, new Vector4(0,0,0,1));
 		}
-		public static Matrix4x4 CreateProjectionMatrix(float angleOfView, float near, float far)
+		public static Matrix4x4 CreateProjectionMatrix(float fovy, float aspect, float zNear, float zFar)
 		{
-			Matrix4x4 proj = new Matrix4x4();
-			float scale = 1f / Mathf.Tan(angleOfView * 0.5f);
-			proj[0, 0] = scale;
-			proj[1, 1] = scale;
-			proj[2, 2] = -far / (far - near);
-			proj[3, 2] = -far * near / (far - near);
-			proj[2, 3] = -1;
-			proj[3, 3] = 0;
+			float tanHalfFovy = (float)Math.Tan(fovy / 2.0f);
 
-			return proj;
+			Vector4 row1 = new Vector4(1.0f / (aspect * tanHalfFovy), 0.0f, 0.0f, 0.0f);
+			Vector4 row2 = new Vector4(0.0f, 1.0f / (tanHalfFovy), 0.0f, 0.0f);
+			Vector4 row3 = new Vector4(0.0f, 0.0f, -(zFar + zNear) / (zFar - zNear), -1.0f);
+			Vector4 row4 = new Vector4(0.0f, 0.0f, -(2.0f * zFar * zNear) / (zFar - zNear), 0.0f);
+
+			return new Matrix4x4(row1, row2, row3, row4);
 		}
 	}
 }

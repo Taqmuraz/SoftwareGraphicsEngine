@@ -34,7 +34,7 @@ namespace EnginePart
 			return Math.Sign (a);
 		}
 
-		public static float Tan(float v)
+		public static float Tan(this float v)
 		{
 			return Sin(v) / Cos(v);
 		}
@@ -88,6 +88,12 @@ namespace EnginePart
 		public static float Determinant (Vector2 axis_a, Vector2 axis_b)
 		{
 			return Determinant(axis_a.x, axis_b.x, axis_a.y, axis_b.y);
+		}
+		public static int Clamp (this int a, int min, int max)
+		{
+			if (a > max) a = max;
+			if (a < min) a = min;
+			return a;
 		}
 	}
 }

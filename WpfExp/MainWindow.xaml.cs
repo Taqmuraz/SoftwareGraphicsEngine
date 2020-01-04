@@ -26,22 +26,26 @@ namespace WpfExp
 		float[] zBuffer;
 		int pixelStride;
 		Int32Rect rect;
-		Matrix4x4 model = Matrix4x4.CreateWorldMatrix(Vector3.right * 0.25f, Vector3.up * 0.5f, Vector3.forward * 0.25f, new Vector3(0, 0, 0));
+		Matrix4x4 model = Matrix4x4.CreateWorldMatrix(Vector3.right, Vector3.up, Vector3.forward, new Vector3(0, 0, 0));
 		Matrix4x4 view = Matrix4x4.CreateWorldMatrix(Vector3.right, Vector3.up, Vector3.forward, Vector3.forward * 4f);
-		Matrix4x4 projection = Matrix4x4.CreateProjectionMatrix(60f, 0.1f, 1000f);
+		Matrix4x4 projection;
 
 		Vector3 pos;
 		Vector3 rot;
 		Vector3 rotateAround;
+		float fieldOfView = 120f;
 		
 
 		public MainWindow()
 		{
 			InitializeComponent();
 
-			int width = (int)img.Width;
-			int height = (int)img.Height;
+			int width = (int)this.Width;
+			int height = (int)this.Height;
+			
 			rect = new Int32Rect(0, 0, width, height);
+
+			textBox.Content = $"{rect.Width} {rect.Height}";
 
 			display = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgr32, null);
 			img.Source = display;
@@ -78,9 +82,12 @@ namespace WpfExp
 			if (e.Key == Key.Up) camRotate += Vector3.right;
 			if (e.Key == Key.Down) camRotate += Vector3.left;
 
-			pos += translate * 0.1f;
+			if (e.Key == Key.Home) fieldOfView--;
+			if (e.Key == Key.End) fieldOfView++;
+
+			pos += (Vector3)(view * translate * 0.1f);
 			rot += rotate * 3f;
-			rotateAround += camRotate;
+			rotateAround += camRotate * 3f;
 		}
 
 		private void CompositionTarget_Rendering(object sender, EventArgs e)
@@ -88,6 +95,9 @@ namespace WpfExp
 			ClearScreen(new Color32(0,0,0,0));
 			ClearzBuffer();
 
+			projection = Matrix4x4.CreateProjectionMatrix(fieldOfView, (float)rect.Width / rect.Height, 0.1f, 1000f);
+
+			Matrix4x4 control = Matrix4x4.CreateRotationMatrix(rot) * Matrix4x4.CreateTranslationMatrix(pos);
 			Matrix4x4 view = Matrix4x4.RotateAround(rotateAround, Vector3.zero) * this.view;
 
 			try
@@ -100,33 +110,38 @@ namespace WpfExp
 				new Vector4(-1, 0, -1, 1),
 				new Vector4(1, 0, -1, 1)
 			};
-				int[] indices = new int[] { 0, 3, 2, 0, 2, 1, 0, 1, 4, 0, 4, 3, 1, 3, 4, 2, 3, 1 };
+				int[] indices = { 0, 3, 2, 0, 2, 1, 0, 1, 4, 0, 4, 3, 1, 3, 4, 2, 3, 1 };
 
-				
+
 				for (int i = 0; i < indices.Length; i += 3)
 				{
 
-					Matrix4x4 control = Matrix4x4.CreateRotationMatrix(rot) * Matrix4x4.CreateTranslationMatrix(pos);
-					Matrix4x4 mvp = model * control * view * projection;
+					
+					Matrix4x4 mvp = model * control * view;
 
 					Vector4 vector_0 = mvp * vs[indices[i]];
 					Vector4 vector_1 = mvp * vs[indices[i + 1]];
 					Vector4 vector_2 = mvp * vs[indices[i + 2]];
+
+
 
 					Vector3 normal = Vector3.Cross((Vector3)(vector_0 - vector_1), (Vector3)(vector_0 - vector_2)).normalized;
 					float light = Vector3.Dot(normal, Vector3.forward);
 
 					if (light > 0)
 					{
-						var t_0 = ViewportToScren(vector_0);
-						var t_1 = ViewportToScren(vector_1);
-						var t_2 = ViewportToScren(vector_2);
+						light = (light + 1) * 0.5f;
+						var t_0 = ViewportToScren(projection * vector_0);
+						var t_1 = ViewportToScren(projection * vector_1);
+						var t_2 = ViewportToScren(projection * vector_2);
 
 						DrawTriangle(t_0, t_1, t_2, new Color32(255, 255, 255, 255) * light);
 					}
-
-					//textBox.Content = $"model : \n{(model * control).ToString()}\n\nview : \n{view}\n\nmodel * view :\n{model * control * view}\n\nvert : {currentVert}\n\nmodel * vert : \n{(model * control * currentVert).ToString()}\n\nmv * vert : \n{(model * control * view * currentVert).ToString()}\n\n{vint}";
 				}
+				Matrix4x4 vp = view * projection;
+				WriteLine(ViewportToScren(Vector3.zero), ViewportToScren(vp * Vector3.right), Color32.red);
+				WriteLine(ViewportToScren(Vector3.zero), ViewportToScren(vp * Vector3.up), Color32.green);
+				WriteLine(ViewportToScren(Vector3.zero), ViewportToScren(vp * Vector3.forward), Color32.blue);
 			}
 			catch (Exception ex)
 			{
@@ -178,6 +193,7 @@ namespace WpfExp
 		}
 		private void WritePixel(int x, int y, Color32 color, bool add = false)
 		{
+			y = rect.Height - y;
 			if (add)
 			{
 				color = color + PickPixel(x, y);
@@ -194,7 +210,6 @@ namespace WpfExp
 		}
 		private Vector3Int ViewportToScren(Vector3 v)
 		{
-			v.y = -v.y;
 			Vector3 s = (v + new Vector3(1f, 1f, 0f)) * 0.5f * new Vector3(rect.Width, rect.Height, 1f);
 			s.z = v.z;
 			return (Vector3Int)s;
@@ -203,61 +218,63 @@ namespace WpfExp
 		{
 			return ViewportToScren((Vector3)v);
 		}
-		private bool TriangleCheck (Vector2 a, Vector2 b, Vector2 c, Vector2 p)
+		private void DrawTrianglePart (Vector3 a, Vector3 b, int height, int totalHeight, int xStart, int yStart, int ySign, Color32 color)
 		{
-			float q1 = Triangle_Q_Check(a, b, p);
-			float q2 = Triangle_Q_Check(b, c, p);
-			float q3 = Triangle_Q_Check(c, a, p);
+			int yMin, yMax;
 
-			return ((q1 >= 0) && (q2 >= 0) && (q3 >= 0)) || ((q1 < 0) && (q2 < 0) && (q3 < 0));
-		}
-		private float Triangle_Q_Check (Vector2 a, Vector2 b, Vector2 at)
-		{
-			return at.x * (b.y - a.y) + at.y * (a.x - b.x) + a.y * b.x - a.x * b.y;
+			yMin = 0;
+			yMax = height;
+
+			for (int y = yMin; y <= yMax; y++)
+			{
+				float progress_a = y / (float)totalHeight;
+				float progress_b = y / (float)height;
+
+				float x_a = a.x * progress_a;
+				float x_b = b.x * progress_b;
+
+				int start = (int)Mathf.Min(x_a, x_b) + xStart;
+				int end = (int)Mathf.Max(x_a, x_b) + xStart;
+
+				start = start.Clamp(15, rect.Width - 15);
+				end = end.Clamp(15, rect.Width - 15);
+
+				textBox.Content = rect.Width;
+
+				for (int x = start; x <= end; x++)
+				{
+					WritePixel(x, yStart + y * ySign, color);
+				}
+			}
 		}
 		private void DrawTriangle(Vector3 t0, Vector3 t1, Vector3 t2, Color32 color)
 		{
-			Vector3[] vs = new Vector3[3] { t0, t1, t2 };
-			vs = vs.OrderByDescending(t => t.y).ToArray();
+			if (t0.y < t1.y) this.Swap(ref t0, ref t1);
+			if (t0.y < t2.y) this.Swap(ref t0, ref t2);
+			if (t1.y < t2.y) this.Swap(ref t1, ref t2);
 
-			t0 = vs[0];
-			t1 = vs[1];
-			t2 = vs[2];
-			if (t1.x > t2.x) this.Swap(ref t1, ref t2);
+			int totalHeight = (int)(t0.y - t2.y);
+			int height = (int)(t0.y - t1.y);
+			int yStart = (int)t0.y;
+			int xStart = (int)t0.x;
 
-			float minX = Mathf.Min(t0.x, t1.x, t2.x);
-			float maxX = Mathf.Max(t0.x, t1.x, t2.x);
-			float minY = Mathf.Min(t0.y, t1.y, t2.y);
-			float maxY = Mathf.Max(t0.y, t1.y, t2.y);
+			Vector3 a = t2 - t0;
+			Vector3 b = t1 - t0;
 
-			Int32Rect bounds = new Int32Rect((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
+			DrawTrianglePart(a, b, height, totalHeight, xStart, yStart, -1, color);
+
+			height = (int)(t1.y - t2.y);
+			xStart = (int)t2.x;
+			yStart = (int)t2.y;
+			a = t1 - t2;
+			b = t0 - t2;
+
+			DrawTrianglePart(b, a, height, totalHeight, xStart, yStart, 1, color);
 
 
-			for (int x = 0; x <= bounds.Width; x++)
-			{
-				for (int y = 0; y <= bounds.Height; y++)
-				{
-					int screenX = bounds.X + x;
-					int screenY = bounds.Y + y;
-					Vector2 point = new Vector2(screenX, screenY);
-
-					if (TriangleCheck((Vector2)t0, (Vector2)t1, (Vector2)t2, point))
-					{
-						WritePixel (screenX, screenY, color);
-					}
-				}
-			}
-
-			WriteLine(t0, t1, new Color32(255, 0, 0, 255));
-			WriteLine(t1, t2, new Color32(0, 255, 0, 255));
-			WriteLine(t0, t2, new Color32(0, 0, 255, 255));
-
-			Vector2 test_a = Vector2.one.normalized;
-			Vector2 test_b = new Vector2(-1, 1).normalized;
-			float d_test = 1f / Mathf.Determinant(test_a, test_b);
-			Vector2 t = new Vector2 (7.07f, 7.07f);
-			Vector2 test = new Vector2 (Mathf.Determinant(t, test_b) * d_test, Mathf.Determinant(test_a, t) * d_test);
-			textBox.Content = $"a = {test_a}\nb = {test_b}\nt = {t}\ntest = {test}";
+			WriteLine(t0, t1, Color32.red);
+			WriteLine(t0, t2, Color32.red);
+			WriteLine(t2, t1, Color32.red);
 		}
 		private void WriteLine(Vector3 coord_0, Vector3 coord_1, Color32 color)
 		{
